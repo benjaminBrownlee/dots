@@ -1,0 +1,93 @@
+#!/bin/bash
+
+if [ '$EUID' -e 0 ]
+  then echo 'Do not run installlation as root; try again.'
+  exit
+fi
+
+
+echo '============================================='
+echo '            UBUNTU i3 INSTALLATION           '
+echo '============================================='
+
+
+echo 'Installing essential software.'
+
+curl -sS https://download.spotify.com/debian/pubkey.gpg | sudo apt-key add - 
+echo "deb http://repository.spotify.com stable non-free" | sudo tee /etc/apt/sources.list.d/spotify.list
+
+sudo apt update
+sudo apt install \
+    git vim mplayer iotop nethogs tmux mysql code gcc \
+    spotify-client compton compton-conf
+sudo apt upgrade
+
+mkdir packages/
+mkdir packages/i3/
+mkdir packages/polybar/
+
+echo 'Installing slack.'
+
+wget -O packages/slack.deb 'https://downloads.slack-edge.com/linux_releases/slack-desktop-4.4.2-amd64.deb'
+sudo apt install packages/slack.deb
+
+echo 'Installing discord.'
+
+wget -O packages/discord.deb 'https://discord.com/api/download?platform=linux&format=deb'
+sudo apt install packages/discord.deb
+
+echo 'Installing anaconda.'
+
+sudo apt install \
+    libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 \
+    libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst
+
+wget -O packages/anaconda.sh 'https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh'
+echo -e '\n\n\n\n\n\n\n\n\n\n\n\n\ny\n\ny\n' | bash packages/anaconda.sh
+
+
+echo 'Installing node version manager.'
+
+wget -O packages/nvm.sh 'https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh'
+bash packages/nvm.sh
+
+
+echo 'Building and installing polybar.'
+
+sudo apt install build-essential git cmake cmake-data \
+    pkg-config python3-sphinx libcairo2-dev libxcb1-dev \
+    libxcb-util0-dev libxcb-randr0-dev \
+    libxcb-composite0-dev python3-xcbgen xcb-proto \
+    libxcb-image0-dev libxcb-ewmh-dev libxcb-icccm4-dev \
+    libxcb-xkb-dev libxcb-xrm-dev libxcb-cursor-dev \
+    libasound2-dev libpulse-dev i3-wm libjsoncpp-dev \
+    libmpdclient-dev libcurl4-openssl-dev libnl-genl-3-dev
+
+wget -O packages/polybar.tar 'https://github.com/polybar/polybar/releases/download/3.4.2/polybar-3.4.2.tar'
+tar -xvf packages/polybar.tar
+rm packages/polybar.tar
+mkdir packages/polybar-3/build/
+conda deactivate
+cmake --build packages/polybar/
+make -O packages/polybar/build/ -j$(nproc)
+sudo make install -O packages/polybar/build/
+
+
+echo 'Building and installing i3.'
+
+sudo apt install \
+    libxcb1-dev libxcb-keysyms1-dev libpango1.0-dev \
+    libxcb-util0-dev libxcb-icccm4-dev libyajl-dev \
+    libstartup-notification0-dev libxcb-randr0-dev \
+    libev-dev libxcb-cursor-dev libxcb-xinerama0-dev \
+    libxcb-xkb-dev libxkbcommon-dev libxkbcommon-x11-dev \
+    autoconf libxcb-xrm0 libxcb-xrm-dev automake libxcb-shape0-dev
+
+git clone 'https://www.github.com/Airblader/i3' packages/i3
+autoreconf --force --install packages/i3/
+rm -rf packages/i3/build/
+mkdir -p packages/i3/build/
+./packages/i3/configure --prefix=/usr --sysconfdir=/etc --disable-sanitizers
+make -C packages/i3/build
+sudo make install -C packages/i3/build
+
